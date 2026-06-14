@@ -117,9 +117,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       case 1:
         return true; // 子供の有無は選択済みで常に有効
       case 2:
-        return _importedSnapshots.isNotEmpty ||
-            (double.tryParse(_assetCtrl.text.replaceAll(',', '')) != null &&
-                _assetCtrl.text.isNotEmpty);
+        return true; // CSVインポートまたは手入力、どちらもなくてもスキップ可
       case 3:
         return double.tryParse(_targetCtrl.text.replaceAll(',', '')) != null;
       default:
