@@ -5,9 +5,10 @@ import 'package:file_picker/file_picker.dart';
 import '../../data/csv_parsers/moneyforward_parser.dart';
 import '../../data/csv_parsers/shinkin_sbi_parser.dart';
 import '../../data/csv_parsers/smcc_parser.dart';
+import '../../data/csv_parsers/sbi_securities_parser.dart';
 import '../providers/providers.dart';
 
-enum ImportSource { moneyforward, shinkinSbi, smcc }
+enum ImportSource { moneyforward, shinkinSbi, smcc, sbiSecurities }
 
 class ImportScreen extends ConsumerStatefulWidget {
   const ImportScreen({super.key});
@@ -55,6 +56,14 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
             icon: Icons.credit_card,
             color: const Color(0xFF00A040),
             onImport: () => _import(ImportSource.smcc),
+          ),
+          const SizedBox(height: 12),
+          _ImportTile(
+            title: 'SBI証券',
+            subtitle: '保有証券 CSV（保有証券一覧 → CSV ダウンロード）',
+            icon: Icons.show_chart,
+            color: const Color(0xFFE65100),
+            onImport: () => _import(ImportSource.sbiSecurities),
           ),
           if (_message != null) ...[
             const SizedBox(height: 24),
@@ -124,6 +133,10 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
           count = snapshots.length;
         case ImportSource.smcc:
           final snapshots = SmccParser.parse(content);
+          await repo.saveSnapshots(snapshots);
+          count = snapshots.length;
+        case ImportSource.sbiSecurities:
+          final snapshots = SbiSecuritiesParser.parse(content);
           await repo.saveSnapshots(snapshots);
           count = snapshots.length;
       }

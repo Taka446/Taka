@@ -13,6 +13,7 @@ const _sourceLabels = {
   AssetSource.moneyforward: 'マネーフォワード',
   AssetSource.shinkinSbi: '住信SBI',
   AssetSource.smcc: '三井住友カード',
+  AssetSource.sbiSecurities: 'SBI証券',
   AssetSource.manual: '手入力',
 };
 

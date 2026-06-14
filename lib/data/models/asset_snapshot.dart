@@ -1,4 +1,4 @@
-enum AssetSource { moneyforward, shinkinSbi, smcc, manual }
+enum AssetSource { moneyforward, shinkinSbi, smcc, sbiSecurities, manual }
 
 class AssetSnapshot {
   final String id;
