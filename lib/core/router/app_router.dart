@@ -8,6 +8,7 @@ import '../../presentation/screens/events_screen.dart';
 import '../../presentation/screens/simulation_screen.dart';
 import '../../presentation/screens/import_screen.dart';
 import '../../presentation/screens/onboarding_screen.dart';
+import '../../presentation/screens/settings_screen.dart';
 
 final appRouter = GoRouter(
   initialLocation: '/',
@@ -32,6 +33,7 @@ final appRouter = GoRouter(
         GoRoute(path: '/events', builder: (_, __) => const EventsScreen()),
         GoRoute(path: '/simulation', builder: (_, __) => const SimulationScreen()),
         GoRoute(path: '/import', builder: (_, __) => const ImportScreen()),
+        GoRoute(path: '/settings', builder: (_, __) => const SettingsScreen()),
       ],
     ),
   ],
@@ -56,12 +58,20 @@ class ScaffoldWithNav extends StatelessWidget {
           NavigationDestination(icon: Icon(Icons.account_balance_wallet), label: '資産'),
           NavigationDestination(icon: Icon(Icons.event), label: 'イベント'),
           NavigationDestination(icon: Icon(Icons.trending_up), label: 'シミュレーション'),
+          NavigationDestination(icon: Icon(Icons.settings), label: '設定'),
         ],
       ),
     );
   }
 
-  static const _routes = ['/', '/goals', '/assets', '/events', '/simulation'];
+  static const _routes = [
+    '/',
+    '/goals',
+    '/assets',
+    '/events',
+    '/simulation',
+    '/settings',
+  ];
 
   int _indexFor(String location) {
     final i = _routes.indexOf(location);
