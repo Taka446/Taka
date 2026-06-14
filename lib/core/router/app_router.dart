@@ -1,15 +1,28 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../presentation/screens/dashboard_screen.dart';
 import '../../presentation/screens/goals_screen.dart';
 import '../../presentation/screens/assets_screen.dart';
 import '../../presentation/screens/events_screen.dart';
 import '../../presentation/screens/simulation_screen.dart';
 import '../../presentation/screens/import_screen.dart';
+import '../../presentation/screens/onboarding_screen.dart';
 
 final appRouter = GoRouter(
   initialLocation: '/',
+  redirect: (context, state) async {
+    if (state.matchedLocation == '/onboarding') return null;
+    final prefs = await SharedPreferences.getInstance();
+    final done = prefs.getBool('onboarding_done') ?? false;
+    if (!done) return '/onboarding';
+    return null;
+  },
   routes: [
+    GoRoute(
+      path: '/onboarding',
+      builder: (_, __) => const OnboardingScreen(),
+    ),
     ShellRoute(
       builder: (context, state, child) => ScaffoldWithNav(child: child),
       routes: [

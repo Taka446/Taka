@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 import '../../data/models/goal.dart';
 import '../providers/providers.dart';
@@ -77,8 +78,7 @@ class _GoalCard extends StatelessWidget {
               style: const TextStyle(fontWeight: FontWeight.w600)),
           subtitle: Text(
               '¥${_fmt.format(goal.targetAmount)} · '
-              '${DateFormat('yyyy年M月', 'ja_JP').format(goal.targetDate)} · '
-              '${_categoryLabels[goal.category]}'),
+              '${DateFormat('yyyy年M月', 'ja_JP').format(goal.targetDate)}'),
           trailing: Row(mainAxisSize: MainAxisSize.min, children: [
             IconButton(icon: const Icon(Icons.edit), onPressed: onEdit),
             IconButton(
@@ -100,14 +100,32 @@ class _GoalDialog extends StatefulWidget {
 }
 
 class _GoalDialogState extends State<_GoalDialog> {
-  late final _nameCtrl = TextEditingController(text: widget.existing?.name);
   late final _amountCtrl = TextEditingController(
       text: widget.existing?.targetAmount.toStringAsFixed(0));
-  late DateTime _targetDate =
-      widget.existing?.targetDate ?? DateTime.now().add(const Duration(days: 365 * 5));
   late GoalCategory _category =
-      widget.existing?.category ?? GoalCategory.other;
+      widget.existing?.category ?? GoalCategory.retirement;
   late Color _color = widget.existing?.color ?? _goalColors.first;
+  int _targetAge = 100;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadTargetAge();
+  }
+
+  Future<void> _loadTargetAge() async {
+    final prefs = await SharedPreferences.getInstance();
+    final currentAge = prefs.getInt('current_age') ?? 30;
+    if (widget.existing != null) {
+      final yearsLeft = widget.existing!.targetDate
+          .difference(DateTime.now())
+          .inDays ~/
+          365;
+      setState(() => _targetAge = currentAge + yearsLeft);
+    } else {
+      setState(() => _targetAge = 100);
+    }
+  }
 
   @override
   Widget build(BuildContext context) => AlertDialog(
@@ -115,57 +133,64 @@ class _GoalDialogState extends State<_GoalDialog> {
         content: SingleChildScrollView(
           child: Column(mainAxisSize: MainAxisSize.min, children: [
             TextField(
-              controller: _nameCtrl,
-              decoration: const InputDecoration(labelText: '目標名'),
-            ),
-            const SizedBox(height: 12),
-            TextField(
               controller: _amountCtrl,
-              decoration: const InputDecoration(labelText: '目標金額 (円)', prefixText: '¥'),
+              decoration: const InputDecoration(
+                  labelText: '目標金額 (円)', prefixText: '¥'),
               keyboardType: TextInputType.number,
+              autofocus: true,
             ),
             const SizedBox(height: 12),
             DropdownButtonFormField<GoalCategory>(
               value: _category,
               decoration: const InputDecoration(labelText: 'カテゴリ'),
-              items: GoalCategory.values.map((c) => DropdownMenuItem(
-                    value: c,
-                    child: Text(_categoryLabels[c]!),
-                  )).toList(),
+              items: GoalCategory.values
+                  .map((c) => DropdownMenuItem(
+                        value: c,
+                        child: Text(_categoryLabels[c]!),
+                      ))
+                  .toList(),
               onChanged: (v) => setState(() => _category = v!),
             ),
             const SizedBox(height: 12),
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              title: const Text('達成期限'),
-              subtitle: Text(DateFormat('yyyy年M月d日', 'ja_JP').format(_targetDate)),
-              trailing: const Icon(Icons.calendar_today),
-              onTap: () async {
-                final d = await showDatePicker(
-                  context: context,
-                  initialDate: _targetDate,
-                  firstDate: DateTime.now(),
-                  lastDate: DateTime(2100),
-                );
-                if (d != null) setState(() => _targetDate = d);
-              },
-            ),
+            Row(children: [
+              const Text('目標年齢'),
+              const Spacer(),
+              IconButton(
+                onPressed: _targetAge > 1
+                    ? () => setState(() => _targetAge--)
+                    : null,
+                icon: const Icon(Icons.remove),
+              ),
+              Text('$_targetAge 歳',
+                  style: const TextStyle(
+                      fontSize: 16, fontWeight: FontWeight.bold)),
+              IconButton(
+                onPressed: _targetAge < 120
+                    ? () => setState(() => _targetAge++)
+                    : null,
+                icon: const Icon(Icons.add),
+              ),
+            ]),
             const SizedBox(height: 8),
-            const Align(alignment: Alignment.centerLeft,
+            const Align(
+                alignment: Alignment.centerLeft,
                 child: Text('カラー', style: TextStyle(fontSize: 12))),
             const SizedBox(height: 6),
             Wrap(
               spacing: 8,
-              children: _goalColors.map((c) => GestureDetector(
-                onTap: () => setState(() => _color = c),
-                child: CircleAvatar(
-                  radius: 16,
-                  backgroundColor: c,
-                  child: _color == c
-                      ? const Icon(Icons.check, color: Colors.white, size: 16)
-                      : null,
-                ),
-              )).toList(),
+              children: _goalColors
+                  .map((c) => GestureDetector(
+                        onTap: () => setState(() => _color = c),
+                        child: CircleAvatar(
+                          radius: 16,
+                          backgroundColor: c,
+                          child: _color == c
+                              ? const Icon(Icons.check,
+                                  color: Colors.white, size: 16)
+                              : null,
+                        ),
+                      ))
+                  .toList(),
             ),
           ]),
         ),
@@ -173,24 +198,27 @@ class _GoalDialogState extends State<_GoalDialog> {
           TextButton(
               onPressed: () => Navigator.pop(context),
               child: const Text('キャンセル')),
-          FilledButton(
-            onPressed: _save,
-            child: const Text('保存'),
-          ),
+          FilledButton(onPressed: _save, child: const Text('保存')),
         ],
       );
 
   Future<void> _save() async {
-    final name = _nameCtrl.text.trim();
-    final amount = double.tryParse(_amountCtrl.text.replaceAll(',', ''));
-    if (name.isEmpty || amount == null) return;
+    final amount =
+        double.tryParse(_amountCtrl.text.replaceAll(',', ''));
+    if (amount == null) return;
+
+    final prefs = await SharedPreferences.getInstance();
+    final currentAge = prefs.getInt('current_age') ?? 30;
+    final yearsTo = (_targetAge - currentAge).clamp(1, 200);
+    final targetDate = DateTime(DateTime.now().year + yearsTo);
+    final label = _categoryLabels[_category] ?? 'その他';
 
     final goal = Goal(
       id: widget.existing?.id ?? _uuid.v4(),
-      name: name,
+      name: '$_targetAge歳・$label',
       category: _category,
       targetAmount: amount,
-      targetDate: _targetDate,
+      targetDate: targetDate,
       color: _color,
       createdAt: widget.existing?.createdAt ?? DateTime.now(),
     );
