@@ -1,0 +1,98 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build-macos:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.19.6'
+          channel: stable
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Run code generation
+        run: dart run build_runner build --delete-conflicting-outputs
+
+      - name: Build macOS
+        run: flutter build macos --release
+
+      - name: Archive macOS app
+        run: |
+          cd build/macos/Build/Products/Release
+          zip -r asset_tracker_macos.zip asset_tracker.app
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos-app
+          path: build/macos/Build/Products/Release/asset_tracker_macos.zip
+          retention-days: 30
+
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.19.6'
+          channel: stable
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Run code generation
+        run: dart run build_runner build --delete-conflicting-outputs
+
+      - name: Build Windows
+        run: flutter build windows --release
+
+      - name: Archive Windows app
+        run: |
+          Compress-Archive -Path build/windows/x64/runner/Release/* -DestinationPath asset_tracker_windows.zip
+        shell: powershell
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-app
+          path: asset_tracker_windows.zip
+          retention-days: 30
+
+  build-ios:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.19.6'
+          channel: stable
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Run code generation
+        run: dart run build_runner build --delete-conflicting-outputs
+
+      - name: Build iOS (no signing)
+        run: flutter build ios --release --no-codesign
+
+      - name: Archive IPA
+        run: |
+          mkdir -p Payload
+          cp -r build/ios/iphoneos/Runner.app Payload/
+          zip -r asset_tracker_ios.ipa Payload
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ios-app
+          path: asset_tracker_ios.ipa
+          retention-days: 30
